@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="יומן צילום">
+<meta name="theme-color" content="#C0006A">
+<title>לסיכום — יומן יום צילום</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --pink:#C0006A;--pink-l:#FBEAF0;
+  --bg:#ffffff;--bg2:#F8F8F8;--bg3:#F2F2F2;
+  --txt:#1A1A1A;--txt2:#666666;--txt3:#999999;
+  --brd:#E5E5E5;--brd2:#CCCCCC;
+  --r:8px;--rl:12px;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg:#1C1C1E;--bg2:#2C2C2E;--bg3:#000000;
+  --txt:#F5F5F5;--txt2:#ABABAB;--txt3:#666666;
+  --brd:#3A3A3C;--brd2:#545456;
+}}
+html,body{height:100%;font-family:'Heebo',sans-serif;background:var(--bg3);color:var(--txt);overflow:hidden;font-size:18px}
+.app{max-width:500px;margin:0 auto;display:flex;flex-direction:column;height:100vh;height:100dvh;background:var(--bg3)}
+.topbar{background:var(--bg);border-bottom:1px solid var(--brd);padding:12px 16px 10px;padding-top:calc(12px + env(safe-area-inset-top,0px));flex-shrink:0}
+.topbar-row{display:flex;justify-content:space-between;align-items:center}
+.topbar-title{font-size:22px;font-weight:600;color:var(--pink)}
+.topbar-date{font-size:17px;color:var(--txt2);margin-top:2px}
+.badge-count{background:var(--pink);color:#fff;border-radius:20px;font-size:20px;font-weight:600;padding:2px 12px;min-width:32px;text-align:center}
+.tabs{display:flex;background:var(--bg);border-bottom:1px solid var(--brd);flex-shrink:0}
+.tab{flex:1;padding:14px 4px;font-size:16px;font-family:'Heebo',sans-serif;background:none;border:none;cursor:pointer;color:var(--txt2);border-bottom:2px solid transparent;transition:all .15s;text-align:center;font-weight:400}
+.tab.active{color:var(--pink);border-bottom-color:var(--pink);font-weight:600}
+.main{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px;-webkit-overflow-scrolling:touch;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+.card{background:var(--bg);border:1px solid var(--brd);border-radius:var(--rl);padding:16px 18px}
+.card-label{font-size:13px;font-weight:600;color:var(--txt3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px;text-align:right}
+.field-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.field-label{font-size:20px;color:var(--txt2);min-width:80px;text-align:right;flex-shrink:0}
+input[type=text],textarea,select{width:100%;font-size:20px;font-family:'Heebo',sans-serif;padding:14px 16px;border:1px solid var(--brd2);border-radius:var(--r);background:var(--bg2);color:var(--txt);direction:rtl;resize:none;-webkit-appearance:none;appearance:none}
+input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:var(--pink);box-shadow:0 0 0 3px rgba(192,0,106,.12)}
+textarea{min-height:130px;line-height:1.7;font-size:20px}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:left 12px center;padding-left:30px}
+.timestamp-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.ts-label{font-size:20px;color:var(--txt2)}
+.ts-badge{background:var(--pink-l);color:var(--pink);font-size:22px;font-weight:600;padding:5px 14px;border-radius:20px;direction:ltr;letter-spacing:.5px}
+.btn-pink{background:var(--pink);color:#fff;border:none;border-radius:var(--r);padding:18px 20px;font-size:20px;font-weight:600;cursor:pointer;width:100%;font-family:'Heebo',sans-serif;transition:opacity .15s;-webkit-appearance:none}
+.btn-pink:active{opacity:.82}
+.btn-outline{background:none;border:1px solid var(--brd2);border-radius:var(--r);padding:16px 16px;font-size:19px;color:var(--txt2);cursor:pointer;width:100%;font-family:'Heebo',sans-serif;transition:background .15s;-webkit-appearance:none}
+.btn-outline:active{background:var(--bg2)}
+.btn-danger{border-color:#F7C1C1;color:#c0392b}
+.entry-chip{display:flex;border:1px solid var(--brd);border-radius:var(--rl);overflow:hidden;background:var(--bg);margin-bottom:8px}
+.chip-time{background:var(--pink-l);color:var(--pink);font-size:20px;font-weight:600;padding:14px 10px;flex-shrink:0;display:flex;align-items:flex-start;padding-top:14px;direction:ltr;min-width:64px;justify-content:center}
+.chip-body{flex:1;padding:14px 14px;direction:rtl;min-width:0}
+.chip-item{font-size:20px;font-weight:600;color:var(--txt);margin-bottom:4px;line-height:1.4}
+.chip-content{font-size:19px;color:var(--txt2);line-height:1.6;word-break:break-word}
+.chip-tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:10px;margin-right:4px}
+.tag-scene{background:#EAF3DE;color:#3B6D11}
+.tag-vis{background:#E6F1FB;color:#185FA5}
+.tag-shatp{background:#FBEAF0;color:#993556}
+.tag-testah{background:#FFF8E1;color:#A06000}
+.tag-testah-fly{background:#F3E8FF;color:#6B21A8}
+.chip-actions{display:flex;gap:8px;margin-top:8px}
+.chip-btn{font-size:18px;padding:9px 16px;border-radius:10px;border:1px solid var(--brd);background:none;color:var(--txt3);cursor:pointer;font-family:'Heebo',sans-serif}
+.chip-btn.del{color:#c0392b;border-color:#F7C1C1}
+.empty-state{text-align:center;padding:50px 20px;color:var(--txt3);font-size:19px}
+.empty-icon{font-size:48px;margin-bottom:12px}
+.filter-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.filter-btn{font-size:18px;padding:10px 16px;border-radius:20px;border:1px solid var(--brd2);background:none;color:var(--txt2);cursor:pointer;font-family:'Heebo',sans-serif}
+.filter-btn.active{background:var(--pink);color:#fff;border-color:var(--pink)}
+.stats-row{display:flex;gap:8px;margin-bottom:14px}
+.stat-box{flex:1;background:var(--bg2);border-radius:var(--r);padding:12px;text-align:center}
+.stat-num{font-size:28px;font-weight:600;color:var(--pink)}
+.stat-lbl{font-size:18px;color:var(--txt3);margin-top:2px}
+.notice{background:var(--bg2);border-right:3px solid var(--pink);padding:12px 14px;border-radius:0 var(--r) var(--r) 0;font-size:19px;color:var(--txt2);line-height:1.6;text-align:right}
+.toast{position:fixed;bottom:calc(30px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%) translateY(80px);background:#1A1A1A;color:#fff;font-family:'Heebo',sans-serif;padding:12px 22px;border-radius:20px;font-size:18px;transition:transform .3s ease;z-index:999;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+strong.kw{font-weight:700;color:var(--pink)}
+/* ── INSIGHTS TAB ── */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px}
+.toggle-label{font-size:18px;color:var(--txt)}
+.toggle-wrap{position:relative;width:48px;height:28px;flex-shrink:0}
+.toggle-wrap input{opacity:0;width:0;height:0;position:absolute}
+.toggle-track{position:absolute;inset:0;background:var(--brd2);border-radius:14px;transition:background .2s;cursor:pointer}
+.toggle-wrap input:checked+.toggle-track{background:var(--pink)}
+.toggle-thumb{position:absolute;top:3px;right:3px;width:22px;height:22px;background:#fff;border-radius:50%;transition:transform .2s;pointer-events:none;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.toggle-wrap input:checked~.toggle-thumb{transform:translateX(-20px)}
+.insight-chip{background:var(--bg);border:1px solid var(--brd);border-radius:var(--rl);padding:12px 14px;margin-bottom:8px;border-right:3px solid var(--pink)}
+.insight-time{font-size:14px;color:var(--txt3);margin-bottom:4px;direction:ltr;display:inline-block}
+.insight-entry-ref{font-size:15px;color:var(--pink);font-weight:600;margin-bottom:6px}
+.insight-text{font-size:17px;color:var(--txt);line-height:1.6}
+.insight-questions{margin-top:8px;padding-top:8px;border-top:1px solid var(--brd)}
+.insight-q{font-size:16px;color:var(--txt2);line-height:1.5;padding-right:14px;position:relative;margin-bottom:4px}
+.insight-q::before{content:'?';position:absolute;right:0;color:var(--pink);font-weight:600}
+.analysis-box{background:var(--bg2);border-radius:var(--rl);padding:14px;margin-top:4px}
+.analysis-section{margin-bottom:14px}
+.analysis-section:last-child{margin-bottom:0}
+.analysis-title{font-size:15px;font-weight:600;color:var(--pink);margin-bottom:8px;text-align:right}
+.analysis-item{font-size:17px;color:var(--txt);line-height:1.6;padding-right:14px;position:relative;margin-bottom:6px}
+.analysis-item::before{content:'•';position:absolute;right:0;color:var(--pink)}
+.pending-badge{background:var(--pink-l);color:var(--pink);font-size:15px;padding:6px 12px;border-radius:20px;text-align:center;margin-bottom:12px}
+/* ── AUTH SCREEN ── */
+.auth-screen{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:24px 28px;padding-top:calc(24px + env(safe-area-inset-top,0px));overflow-y:auto}
+.auth-logo{font-size:52px;margin-bottom:12px}
+.auth-title{font-size:26px;font-weight:600;color:var(--pink);margin-bottom:4px;text-align:center}
+.auth-sub{font-size:17px;color:var(--txt3);margin-bottom:32px;text-align:center}
+.auth-form{width:100%;max-width:340px;display:flex;flex-direction:column;gap:10px}
+.auth-tabs{display:flex;background:var(--bg2);border-radius:var(--r);padding:4px;margin-bottom:8px;gap:4px}
+.auth-tab{flex:1;padding:10px;font-size:17px;font-family:'Heebo',sans-serif;border:none;background:none;border-radius:6px;cursor:pointer;color:var(--txt2);font-weight:500;transition:all .15s}
+.auth-tab.active{background:var(--bg);color:var(--pink);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.auth-label{font-size:16px;color:var(--txt2);margin-bottom:4px;display:block;text-align:right}
+.auth-input{width:100%;font-size:19px;font-family:'Heebo',sans-serif;padding:14px 16px;border:1px solid var(--brd2);border-radius:var(--r);background:var(--bg2);color:var(--txt);direction:ltr;-webkit-appearance:none;appearance:none}
+.auth-input:focus{outline:none;border-color:var(--pink);box-shadow:0 0 0 3px rgba(192,0,106,.12)}
+.auth-divider{display:flex;align-items:center;gap:10px;margin:4px 0}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--brd)}
+.auth-divider span{font-size:14px;color:var(--txt3)}
+.auth-msg{font-size:16px;text-align:center;padding:10px;border-radius:var(--r);margin-top:4px}
+.auth-msg.error{background:#FEE2E2;color:#c0392b}
+.auth-msg.success{background:#DCFCE7;color:#166534}
+/* ── SPLASH SCREEN ── */
+.splash{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 28px;padding-top:calc(32px + env(safe-area-inset-top,0px))}
+.splash-logo{font-size:52px;margin-bottom:16px}
+.splash-title{font-size:26px;font-weight:600;color:var(--pink);margin-bottom:6px;text-align:center}
+.splash-sub{font-size:17px;color:var(--txt3);margin-bottom:40px;text-align:center}
+.splash-form{width:100%;max-width:340px;display:flex;flex-direction:column;gap:12px}
+.splash-label{font-size:17px;color:var(--txt2);margin-bottom:4px;display:block;text-align:right}
+</style>
+</head>
+<body>
+<!-- AUTH SCREEN -->
+<div class="auth-screen" id="auth-screen">
+  <div class="auth-logo">🎬</div>
+  <div class="auth-title">לסיכום</div>
+  <div class="auth-sub">יומן יום צילום</div>
+  <div class="auth-form">
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">כניסה</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">הרשמה</button>
+      <button class="auth-tab" onclick="switchAuthTab('magic')">קישור למייל</button>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="auth-login">
+      <button class="btn-pink" style="margin-bottom:12px;background:#fff;color:#333;border:1px solid var(--brd2);display:flex;align-items:center;justify-content:center;gap:10px" onclick="doGoogleLogin()">
+        <img src="https://www.google.com/favicon.ico" style="width:20px;height:20px"> כניסה עם Google
+      </button>
+      <div class="auth-divider"><span>או עם מייל וסיסמה</span></div>
+      <label class="auth-label">מייל</label>
+      <input class="auth-input" type="email" id="login-email" placeholder="your@email.com" autocomplete="email">
+      <div style="margin-top:10px">
+        <label class="auth-label">סיסמה</label>
+        <input class="auth-input" type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn-pink" style="margin-top:14px" onclick="doLogin()">כניסה ←</button>
+      <button onclick="switchAuthTab('forgot')" style="background:none;border:none;color:var(--txt3);font-size:16px;font-family:'Heebo',sans-serif;cursor:pointer;margin-top:10px;text-align:center;width:100%">שכחתי סיסמה</button>
+    </div>
+
+    <!-- FORGOT PASSWORD -->
+    <div id="auth-forgot" style="display:none">
+      <div style="font-size:17px;color:var(--txt2);text-align:right;margin-bottom:12px;line-height:1.6">הזיני את המייל שלך ונשלח לך קישור לאיפוס סיסמה.</div>
+      <label class="auth-label">מייל</label>
+      <input class="auth-input" type="email" id="forgot-email" placeholder="your@email.com" autocomplete="email">
+      <button class="btn-pink" style="margin-top:14px" onclick="doForgotPassword()">שלחי קישור לאיפוס ←</button>
+      <button onclick="switchAuthTab('login')" style="background:none;border:none;color:var(--txt3);font-size:16px;font-family:'Heebo',sans-serif;cursor:pointer;margin-top:10px;text-align:center;width:100%">← חזרה לכניסה</button>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="auth-register" style="display:none">
+      <label class="auth-label">השם שלך</label>
+      <input class="auth-input" type="text" id="reg-name" placeholder="שם מלא" style="direction:rtl">
+      <div style="margin-top:10px">
+        <label class="auth-label">שם הזוג שאת מלווה</label>
+        <input class="auth-input" type="text" id="reg-couple" placeholder='למשל: זוג ורוד' style="direction:rtl">
+      </div>
+      <div style="margin-top:10px">
+        <label class="auth-label">מייל</label>
+        <input class="auth-input" type="email" id="reg-email" placeholder="your@email.com" autocomplete="email">
+      </div>
+      <div style="margin-top:10px">
+        <label class="auth-label">סיסמה</label>
+        <input class="auth-input" type="password" id="reg-password" placeholder="לפחות 6 תווים" autocomplete="new-password">
+      </div>
+      <button class="btn-pink" style="margin-top:14px" onclick="doRegister()">הרשמה ←</button>
+    </div>
+
+    <!-- MAGIC LINK -->
+    <div id="auth-magic" style="display:none">
+      <label class="auth-label">מייל</label>
+      <input class="auth-input" type="email" id="magic-email" placeholder="your@email.com" autocomplete="email">
+      <button class="btn-pink" style="margin-top:14px" onclick="doMagicLink()">שלחי לי קישור כניסה ←</button>
+    </div>
+
+    <div id="auth-msg" class="auth-msg" style="display:none"></div>
+  </div>
+</div>
+
+<div class="app">
+  <div class="topbar">
+    <div class="topbar-row">
+      <div>
+        <div class="topbar-title">לסיכום 🎬</div>
+        <div class="topbar-date" id="topbar-date" style="font-size:15px;color:var(--txt3)">יומן יום צילום<span id="topbar-title-name"></span></div>
+        <div id="topbar-dateline" style="font-size:14px;color:var(--txt3);margin-top:1px"></div>
+      </div>
+      <div class="badge-count" id="entry-count">0</div>
+      <button onclick="doLogout()" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px;color:var(--txt3)" title="התנתקות">↩️</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('write')">✏️ כתיבה</button>
+    <button class="tab" onclick="switchTab('log')">📋 יומן</button>
+    <button class="tab" onclick="switchTab('insights')">💡 תובנות</button>
+    <button class="tab" onclick="switchTab('export')">⬇️ ייצוא</button>
+  </div>
+
+  <!-- WRITE -->
+  <div class="main" id="tab-write">
+    <div class="card">
+      <div class="card-label">פרטי יום הצילום</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="field-row"><span class="field-label">סדרה</span><input type="text" id="series-name" value="חתונה ממבט ראשון"></div>
+        <div class="field-row"><span class="field-label">עונה / זוג</span><input type="text" id="season-name" value="עונה 9 — זוג ורוד"></div>
+        <div class="field-row"><span class="field-label">תאריך</span><input type="text" id="shoot-date" placeholder="15.04"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">רשומה חדשה</div>
+      <div class="timestamp-row">
+        <span class="ts-label">שעה נוכחית:</span>
+        <span class="ts-badge" id="live-clock">--:--</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="field-row"><span class="field-label">שם אייטם</span><input type="text" id="item-name" placeholder="למשל: גור שיחת וידאו"></div>
+        <div class="field-row"><span class="field-label">לוקיישן</span><input type="text" id="location" placeholder="למשל: ספסל דובנוב"></div>
+        <div class="field-row">
+          <span class="field-label">סוג</span>
+          <select id="entry-type">
+            <option value="scene">סצנה</option>
+            <option value="testah">טסטה</option>
+            <option value="testah-fly">טסטה און דה פליי</option>
+            <option value="vis">VIS / ויזואל</option>
+            <option value="shatp">שת"פ</option>
+          </select>
+        </div>
+        <textarea id="content" placeholder="תוכן הסצנה... ציטוטים יהפכו למרכאות אוטומטית" oninput="captureWritingTime()"></textarea>
+      </div>
+      <button class="btn-pink" style="margin-top:12px" onclick="addEntry()">הוסף ליומן</button>
+      <div class="toggle-row" style="margin-top:10px;padding:10px 0 0">
+        <span class="toggle-label" style="font-size:17px">💡 תובנה אחרי כל רשומה</span>
+        <label class="toggle-wrap">
+          <input type="checkbox" id="realtime-toggle" onchange="saveInsightSettings()">
+          <div class="toggle-track"></div>
+          <div class="toggle-thumb"></div>
+        </label>
+      </div>
+    </div>
+    <div class="notice">💡 <strong>ויז, VIS, שת"פ, ויזואל</strong> — מודגשים אוטומטית בייצוא</div>
+  </div>
+
+  <!-- LOG -->
+  <div class="main" id="tab-log" style="display:none">
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:4px">
+      <input type="text" id="search-query" placeholder="🔍 חיפוש לפי מילת מפתח..." oninput="renderList()" style="margin:0">
+      <input type="text" id="search-date" placeholder="📅 סינון לפי תאריך (למשל: 09.05)" oninput="renderList()" style="margin:0">
+    </div>
+    <div class="filter-row">
+      <button class="filter-btn active" onclick="setFilter('all',this)">הכל</button>
+      <button class="filter-btn" onclick="setFilter('scene',this)">סצנות</button>
+      <button class="filter-btn" onclick="setFilter('testah',this)">טסטות</button>
+      <button class="filter-btn" onclick="setFilter('testah-fly',this)">און דה פליי</button>
+      <button class="filter-btn" onclick="setFilter('vis',this)">VIS</button>
+      <button class="filter-btn" onclick="setFilter('shatp',this)">שת"פ</button>
+    </div>
+    <div id="entries-list"></div>
+    <div class="empty-state" id="empty-msg" style="display:none"><div class="empty-icon">📝</div>עדיין אין רשומות.<br>עברי לכתיבה והתחילי!</div>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div class="main" id="tab-insights" style="display:none">
+    <div class="card">
+      <div class="card-label">תובנות בזמן אמת</div>
+      <div id="realtime-insights-list">
+        <div class="empty-state" id="realtime-empty" style="padding:20px 0">
+          <div style="font-size:32px;margin-bottom:8px">💡</div>
+          תובנות יופיעו כאן לאחר הוספת רשומות
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">ניתוח סוף יום</div>
+      <div style="margin-bottom:12px">
+        <div class="field-row">
+          <span class="field-label" style="min-width:80px">תאריך</span>
+          <input type="text" id="analysis-date-filter" placeholder="למשל: 12.05 — ריק = כל הרשומות" style="font-size:17px">
+        </div>
+      </div>
+      <div class="pending-badge" id="analysis-pending-msg">⏳ ממתין לחיבור AI — הכפתור יופעל בקרוב</div>
+      <button class="btn-pink" id="analyze-btn" onclick="runDayAnalysis()" disabled style="opacity:.5">
+        🧠 נתח את היום המלא
+      </button>
+      <div id="day-analysis-result" style="margin-top:12px"></div>
+    </div>
+
+    <div class="notice">💡 כל התובנות פנימיות בלבד — לא מופיעות בסיכום היום</div>
+  </div>
+
+  <!-- EXPORT -->
+  <div class="main" id="tab-export" style="display:none">
+    <div class="card">
+      <div class="card-label">סטטיסטיקות יום</div>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-num" id="stat-scenes">0</div><div class="stat-lbl">סצנות</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-testahs">0</div><div class="stat-lbl">טסטות</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-vis">0</div><div class="stat-lbl">VIS</div></div>
+      </div>
+      <button class="btn-pink" onclick="exportRTF()">⬇️ ייצוא קובץ Word (.doc)</button>
+      <div style="margin-top:8px">
+        <button class="btn-outline" onclick="exportCSV()">📊 ייצוא CSV</button>
+      </div>
+    </div>
+    <div class="notice">הקובץ נפתח ב-Word, Numbers ו-Pages. כולל: טבלה מסודרת, הדגשות, ציטוטים במרכאות, טסטות בעמודה נפרדת.</div>
+    <div class="card">
+      <div class="card-label">ניהול נתונים</div>
+      <button class="btn-outline btn-danger" onclick="clearAll()">🗑 מחיקת כל הרשומות</button>
+    </div>
+    <div class="card">
+      <div class="card-label">חיבור AI (אופציונלי)</div>
+      <div class="notice" style="margin-bottom:12px;font-size:17px">הכלי עובד מצוין בלי AI. מפתח API נדרש רק לתובנות וניתוח יום — כל משתמש יכול להוסיף מפתח אישי שלו.</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <input type="password" id="api-key-input" placeholder="מפתח אישי (sk-ant-...) — אופציונלי" autocomplete="off" style="font-size:15px;direction:ltr">
+        <button class="btn-pink" onclick="saveApiKey()">שמור מפתח</button>
+        <div id="api-key-status" style="font-size:15px;color:var(--txt3);text-align:center"></div>
+        <button onclick="removeApiKey()" style="background:none;border:none;color:var(--txt3);font-size:15px;cursor:pointer;font-family:'Heebo',sans-serif">הסר מפתח</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── SUPABASE SETUP ──
+const SUPA_URL='https://itcoxajcvhrwhafszwks.supabase.co';
+const SUPA_KEY='sb_publishable_-JJng-CZ3A4aH9z-6dtomg__YQwZcai';
+const supa=supabase.createClient(SUPA_URL,SUPA_KEY,{
+  auth:{persistSession:true,storageKey:'filmlog_auth',storage:window.localStorage}
+});
+
+let entries=[];
+let currentFilter='all';
+let currentUser=null;
+
+// Switch between login / register / magic / forgot tabs
+function switchAuthTab(tab){
+  ['login','register','magic','forgot'].forEach(t=>{
+    const el=document.getElementById('auth-'+t);
+    if(el) el.style.display=t===tab?'block':'none';
+  });
+  document.querySelectorAll('.auth-tab').forEach((el,i)=>{
+    el.classList.toggle('active',['login','register','magic'][i]===tab);
+  });
+  hideAuthMsg();
+}
+
+function showAuthMsg(msg,type='error'){
+  const el=document.getElementById('auth-msg');
+  el.textContent=msg;el.className='auth-msg '+type;el.style.display='block';
+}
+function hideAuthMsg(){
+  const el=document.getElementById('auth-msg');
+  if(el)el.style.display='none';
+}
+
+// Login with Google
+async function doGoogleLogin(){
+  const{error}=await supa.auth.signInWithOAuth({
+    provider:'google',
+    options:{redirectTo:window.location.href}
+  });
+  if(error) showAuthMsg(error.message);
+}
+
+// Login with email + password
+async function doLogin(){
+  const email=document.getElementById('login-email').value.trim();
+  const password=document.getElementById('login-password').value;
+  if(!email||!password){showAuthMsg('נא למלא מייל וסיסמה');return;}
+  showAuthMsg('מתחברת...','success');
+  const{error}=await supa.auth.signInWithPassword({email,password});
+  if(error){showAuthMsg(error.message==='Invalid login credentials'?'מייל או סיסמה שגויים':error.message);return;}
+}
+
+// Register new user
+async function doRegister(){
+  const name=document.getElementById('reg-name').value.trim();
+  const couple=document.getElementById('reg-couple').value.trim();
+  const email=document.getElementById('reg-email').value.trim();
+  const password=document.getElementById('reg-password').value;
+  if(!name||!couple||!email||!password){showAuthMsg('נא למלא את כל השדות');return;}
+  if(password.length<6){showAuthMsg('הסיסמה חייבת להיות לפחות 6 תווים');return;}
+  showAuthMsg('יוצרת חשבון...','success');
+  const{error}=await supa.auth.signUp({email,password,options:{data:{name,couple}}});
+  if(error){showAuthMsg(error.message);return;}
+  showAuthMsg('✓ נשלח מייל אימות — בדקי את תיבת הדואר','success');
+}
+
+// Send password reset email
+async function doForgotPassword(){
+  const email=document.getElementById('forgot-email').value.trim();
+  if(!email){showAuthMsg('נא להזין מייל');return;}
+  showAuthMsg('שולחת...','success');
+  const{error}=await supa.auth.resetPasswordForEmail(email,{
+    redirectTo:window.location.origin+window.location.pathname
+  });
+  if(error){showAuthMsg(error.message);return;}
+  showAuthMsg('✓ קישור לאיפוס נשלח למייל שלך!','success');
+}
+
+// Send magic link
+async function doMagicLink(){
+  const email=document.getElementById('magic-email').value.trim();
+  if(!email){showAuthMsg('נא להזין מייל');return;}
+  showAuthMsg('שולחת קישור...','success');
+  const{error}=await supa.auth.signInWithOtp({email});
+  if(error){showAuthMsg(error.message);return;}
+  showAuthMsg('✓ קישור נשלח למייל שלך!','success');
+}
+
+// Logout
+async function doLogout(){
+  if(!confirm('להתנתק?'))return;
+  await supa.auth.signOut();
+}
+
+// Enter app after successful auth
+async function enterApp(user){
+  currentUser=user;
+  document.getElementById('auth-screen').style.display='none';
+  const meta=user.user_metadata||{};
+  const name=meta.name||user.email.split('@')[0];
+  const couple=meta.couple||'';
+  applyProfile({name,couple});
+  await loadData();
+  updateCount();
+  updateStats();
+}
+
+// Apply profile data to the app UI
+function applyProfile(p){
+  const sn=document.getElementById('season-name');
+  if(sn&&p.couple) sn.value='עונה 9 — '+p.couple;
+  const title=document.getElementById('topbar-title-name');
+  if(title) title.textContent=' · '+p.name;
+}
+
+// Listen for auth state changes
+supa.auth.onAuthStateChange((event,session)=>{
+  if(session&&session.user){
+    enterApp(session.user);
+  } else {
+    currentUser=null;
+    document.getElementById('auth-screen').style.display='flex';
+  }
+});
+
+// ── DATA (Offline-first + Supabase sync) ──
+function userKey(k){return currentUser?'filmlog_'+currentUser.id+'_'+k:k;}
+function pendingKey(){return userKey('pending');}
+
+// Load pending (unsynced) entries from localStorage
+function loadPending(){try{return JSON.parse(localStorage.getItem(pendingKey())||'[]')}catch(e){return[]}}
+function savePending(arr){try{localStorage.setItem(pendingKey(),JSON.stringify(arr))}catch(e){}}
+
+// Load entries — always from localStorage first, then sync from Supabase if online
+async function loadData(){
+  // always load from localStorage immediately
+  try{entries=JSON.parse(localStorage.getItem(userKey('v3'))||'[]')}catch(e){entries=[];}
+  updateCount();updateStats();
+  // then try to sync from Supabase in background
+  if(!currentUser||!navigator.onLine)return;
+  try{
+    const{data,error}=await supa.from('entries').select('*').eq('user_id',currentUser.id).order('id',{ascending:true});
+    if(error||!data)return;
+    const remoteEntries=data.map(r=>({id:r.id,time:r.time,date:r.date||'',name:r.name||'',location:r.location||'',type:r.type,content:r.content}));
+    // merge: remote + any pending local entries not yet synced
+    const pending=loadPending();
+    const remoteIds=new Set(remoteEntries.map(e=>e.id));
+    const merged=[...remoteEntries,...pending.filter(e=>!remoteIds.has(e.id))];
+    entries=merged.sort((a,b)=>a.id-b.id);
+    localStorage.setItem(userKey('v3'),JSON.stringify(entries));
+    updateCount();updateStats();
+    // try to flush pending
+    await flushPending();
+  }catch(e){}
+}
+
+// Save entry — always to localStorage, queue for Supabase sync
+async function saveData(){
+  // always save to localStorage immediately
+  try{localStorage.setItem(userKey('v3'),JSON.stringify(entries))}catch(e){}
+  updateCount();updateStats();
+  if(!currentUser)return;
+  const last=entries[entries.length-1];
+  if(!last)return;
+  if(navigator.onLine){
+    try{
+      await supa.from('entries').upsert({
+        id:last.id,user_id:currentUser.id,
+        time:last.time,date:last.date,name:last.name,
+        location:last.location,type:last.type,content:last.content
+      });
+      return;
+    }catch(e){}
+  }
+  // if offline or failed — add to pending queue
+  const pending=loadPending();
+  if(!pending.find(e=>e.id===last.id)) pending.push(last);
+  savePending(pending);
+  showToast('📴 נשמר מקומית — יסתנכרן כשיהיה חיבור');
+}
+
+// Flush pending entries to Supabase when back online
+async function flushPending(){
+  if(!currentUser||!navigator.onLine)return;
+  const pending=loadPending();
+  if(!pending.length)return;
+  try{
+    await supa.from('entries').upsert(pending.map(e=>({
+      id:e.id,user_id:currentUser.id,
+      time:e.time,date:e.date,name:e.name,
+      location:e.location,type:e.type,content:e.content
+    })));
+    savePending([]);
+    showToast('✓ הרשומות הממתינות סונכרנו!');
+  }catch(e){}
+}
+
+// Listen for when connection returns — flush pending
+window.addEventListener('online',()=>{
+  showToast('📶 חיבור חזר — מסנכרן...');
+  flushPending();
+});
+
+// Delete entry from Supabase
+async function deleteEntryRemote(id){
+  if(!currentUser)return;
+  try{await supa.from('entries').delete().eq('id',id).eq('user_id',currentUser.id);}catch(e){}
+  // also remove from pending if exists
+  const pending=loadPending().filter(e=>e.id!==id);
+  savePending(pending);
+}
+function pad(n){return String(n).padStart(2,'0')}
+function nowTime(){const d=new Date();return pad(d.getHours())+':'+pad(d.getMinutes())}
+function updateClock(){const el=document.getElementById('live-clock');if(el)el.textContent=nowTime()}
+setInterval(updateClock,1000);updateClock();
+function updateDate(){
+  const d=new Date();
+  const days=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+  const months=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+  // update only the date line below topbar, not the subtitle
+  const dateLine=document.getElementById('topbar-dateline');
+  if(dateLine) dateLine.textContent='יום '+days[d.getDay()]+', '+d.getDate()+' ב'+months[d.getMonth()];
+  const de=document.getElementById('shoot-date');
+  if(de&&!de.value)de.value=pad(d.getDate())+'.'+pad(d.getMonth()+1);
+}
+updateDate();
+function updateCount(){document.getElementById('entry-count').textContent=entries.length}
+function updateStats(){
+  document.getElementById('stat-scenes').textContent=entries.filter(e=>e.type==='scene').length;
+  document.getElementById('stat-testahs').textContent=entries.filter(e=>e.type==='testah').length;
+  document.getElementById('stat-vis').textContent=entries.filter(e=>e.type==='vis'||e.type==='shatp').length;
+}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400)}
+function switchTab(tab){
+  ['write','log','insights','export'].forEach(t=>{document.getElementById('tab-'+t).style.display=t===tab?'flex':'none'});
+  document.querySelectorAll('.tab').forEach((el,i)=>{el.classList.toggle('active',['write','log','insights','export'][i]===tab)});
+  if(tab==='log')renderList();
+  if(tab==='export')updateStats();
+  if(tab==='insights')renderInsights();
+}
+function typeLabel(t){return{scene:'סצנה',testah:'טסטה',['testah-fly']:'טסטה און דה פליי',vis:'VIS / ויזואל',shatp:'שת"פ'}[t]||t}
+function typeTagClass(t){return{scene:'tag-scene',vis:'tag-vis',shatp:'tag-shatp',testah:'tag-testah',['testah-fly']:'tag-testah-fly'}[t]||'tag-scene'}
+// Track the time when user starts writing an entry
+let writingStartTime=null;
+
+// Capture the time when user first starts typing in the content field
+function captureWritingTime(){
+  if(!writingStartTime) writingStartTime=nowTime();
+}
+
+// Add new entry
+async function addEntry(){
+  const name=document.getElementById('item-name').value.trim();
+  const location=document.getElementById('location').value.trim();
+  const type=document.getElementById('entry-type').value;
+  let content=document.getElementById('content').value.trim();
+  if(!content){showToast('⚠️ יש לרשום תוכן');return}
+  const entryTime=writingStartTime||nowTime();
+  writingStartTime=null;
+  content=addQuotes(content);
+  const entry={id:Date.now(),time:entryTime,date:document.getElementById('shoot-date').value||'',name,location,type,content};
+  entries.push(entry);
+  await saveData();
+  document.getElementById('item-name').value='';
+  document.getElementById('location').value='';
+  document.getElementById('content').value='';
+  document.getElementById('entry-type').value='scene';
+  showToast('✓ נוסף — '+entryTime);
+  if(document.getElementById('realtime-toggle').checked){
+    generateRealtimeInsight(entry);
+  }
+}
+function setFilter(f,el){
+  currentFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');renderList();
+}
+function hlText(t){
+  t=addQuotes(t);
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/(ויז(?:ואל(?:יות)?)?|VIS)/g,'<strong class="kw">$1</strong>')
+    .replace(/(שת["״]פ)/g,'<strong class="kw">$1</strong>')
+    .substring(0,200)+(t.length>200?'…':'');
+}
+function renderList(){
+  const list=document.getElementById('entries-list');
+  const emptyMsg=document.getElementById('empty-msg');
+  const query=(document.getElementById('search-query').value||'').trim().toLowerCase();
+  const dateQuery=(document.getElementById('search-date').value||'').trim();
+  let filtered=currentFilter==='all'?entries:entries.filter(e=>e.type===currentFilter);
+  // filter by keyword across name, location, content
+  if(query){
+    filtered=filtered.filter(e=>{
+      const haystack=((e.name||'')+' '+(e.location||'')+' '+(e.content||'')).toLowerCase();
+      return haystack.includes(query);
+    });
+  }
+  // filter by date string match (e.g. "09.05")
+  if(dateQuery){
+    filtered=filtered.filter(e=>(e.date||'').includes(dateQuery));
+  }
+  if(!filtered.length){list.innerHTML='';emptyMsg.style.display='block';return}
+  emptyMsg.style.display='none';
+  list.innerHTML=[...filtered].reverse().map(e=>`
+    <div class="entry-chip">
+      <div class="chip-time">${e.time}${e.date?'<br><span style="font-size:13px;opacity:.7">'+e.date+'</span>':''}</div>
+      <div class="chip-body">
+        <div class="chip-item">
+          <span class="chip-tag ${typeTagClass(e.type)}">${typeLabel(e.type)}</span>
+          ${e.name||''}
+          ${e.location?`<span style="font-size:17px;color:var(--txt3)"> · ${e.location}</span>`:''}
+        </div>
+        <div class="chip-content">${hlText(e.content)}</div>
+        <div class="chip-actions">
+          <button class="chip-btn del" onclick="deleteEntry(${e.id})">מחיקה</button>
+          <button class="chip-btn" onclick="editEntry(${e.id})">עריכה</button>
+          ${localStorage.getItem('filmlog_api_key')?`<button class="chip-btn" onclick="suggestTestah(${e.id})" style="color:var(--pink);border-color:var(--pink)">💡 שאלות טסטה</button>`:''}
+        </div>
+        <div id="testah-suggestions-${e.id}" style="display:none;margin-top:8px;padding:10px;background:var(--bg2);border-radius:var(--r);font-size:17px;line-height:1.7;color:var(--txt)"></div>
+      </div>
+    </div>`).join('');
+}
+function deleteEntry(id){if(!confirm('למחוק?'))return;deleteEntryRemote(id);entries=entries.filter(e=>e.id!==id);saveData();renderList()}
+function editEntry(id){
+  const e=entries.find(x=>x.id===id);if(!e)return;
+  switchTab('write');
+  document.getElementById('item-name').value=e.name||'';
+  document.getElementById('location').value=e.location||'';
+  document.getElementById('entry-type').value=e.type;
+  document.getElementById('content').value=e.content;
+  entries=entries.filter(x=>x.id!==id);saveData();
+}
+function clearAll(){if(!confirm('למחוק הכל?'))return;entries=[];saveData();renderList();showToast('🗑 נמחק')}
+
+function addQuotes(t){
+  return t.replace(/"([^"\n]+)"/g,'\u201C$1\u201D')
+          .replace(/״([^״\n]+)״/g,'\u201C$1\u201D')
+          .replace(/\u2018([^\u2018\n]+)\u2019/g,'\u2018$1\u2019');
+}
+
+// ── RTF EXPORT (no external library needed) ──
+function rtfEscape(s){
+  let out='';
+  for(let i=0;i<s.length;i++){
+    const c=s.charCodeAt(i);
+    if(c===10){out+='\\line '}
+    else if(c<128){
+      if(s[i]==='\\')out+='\\\\';
+      else if(s[i]==='{')out+='\\{';
+      else if(s[i]==='}')out+='\\}';
+      else out+=s[i];
+    } else {
+      // Unicode: \uN?
+      const signed=c>32767?c-65536:c;
+      out+='\\u'+signed+'?';
+    }
+  }
+  return out;
+}
+
+function rtfBold(text){
+  // bold keywords
+  return text.replace(/(ויז(?:ואל(?:יות)?)?|VIS|שת["״]פ)/g,(m)=>`{\\b ${rtfEscape(m)}}`);
+}
+
+function rtfCell(text,bold){
+  const processed=addQuotes(text||'');
+  const lines=processed.split('\n');
+  let out='';
+  lines.forEach((line,i)=>{
+    if(bold){out+=`{\\b ${rtfEscape(line)}}`;}
+    else{out+=rtfBold(rtfEscape(line));}
+    if(i<lines.length-1)out+='\\line ';
+  });
+  return `\\pard\\intbl\\qr\\rtlpar\\ltrpar\\rtlch ${out}\\cell\n`;
+}
+
+function exportRTF(){
+  if(!entries.length){showToast('⚠️ אין רשומות');return}
+  const series=document.getElementById('series-name').value||'חתונה ממבט ראשון';
+  const season=document.getElementById('season-name').value||'';
+  const date=document.getElementById('shoot-date').value||'';
+
+  // Filter entries by current date
+  const filtered=date?entries.filter(e=>(e.date||'')=== date):entries;
+  if(!filtered.length){showToast('⚠️ אין רשומות לתאריך '+date);return}
+
+  // Group by item name
+  const order=[];
+  const map={};
+  filtered.forEach(e=>{
+    const key=e.name||('_'+e.id);
+    if(!map[key]){map[key]={name:e.name||'',time:e.time,location:e.location||'',scenes:[],testahs:[]};order.push(key)}
+    if(e.type==='testah'||e.type==='testah-fly'){
+      const label=e.type==='testah-fly'?'און דה פליי':'';
+      map[key].testahs.push((label?'['+label+'] ':'')+e.time+' '+e.content);
+    } else map[key].scenes.push(e.content);
+  });
+
+  // Column widths in twips (1440 twips = 1 inch)
+  // Total ~9360 twips for content area
+  const W=[1700,1200,4560,2300]; // name | time+loc | content | testah
+
+  function colDef(w){return`\\clbrdrt\\brdrw10\\brdrs\\clbrdrl\\brdrw10\\brdrs\\clbrdrb\\brdrw10\\brdrs\\clbrdrr\\brdrw10\\brdrs\\cellx${w}`}
+
+  let cumW=0;
+  const colDefs=W.map(w=>{cumW+=w;return colDef(cumW)}).join('\n');
+
+  function headerRow(){
+    const headers=['שם האייטם','שעה+לוקיישן+מצלמה','תוכן הסצנה','טסטה (שעה+פירוט)'];
+    return `\\trowd\\trgaph70\n${colDefs}\n`+
+      headers.map(h=>`\\pard\\intbl\\qc\\rtlpar {\\b ${rtfEscape(h)}}\\cell\n`).join('')+
+      `\\row\n`;
+  }
+
+  function dataRow(g){
+    const timeLoc=[g.time,g.location].filter(Boolean).join('\n');
+    const sceneText=g.scenes.join('\n');
+    const testahText=g.testahs.join('\n');
+    return `\\trowd\\trgaph70\n${colDefs}\n`+
+      rtfCell(g.name,false)+
+      rtfCell(timeLoc,false)+
+      rtfCell(sceneText,false)+
+      rtfCell(testahText,false)+
+      `\\row\n`;
+  }
+
+  const titleLine=`\\pard\\qc\\rtlpar {\\b\\ul ${rtfEscape('סיכום יום – '+series+' '+season)}}\\par\n`;
+  const dateLine=`\\pard\\qc\\rtlpar {\\b\\ul ${rtfEscape('תאריך: '+date)}}\\par\\par\n`;
+
+  const rows=order.map(k=>dataRow(map[k])).join('');
+
+  const rtf=`{\\rtf1\\ansi\\deff0
+{\\fonttbl{\\f0\\froman\\fcharset177 David;}}
+{\\colortbl;\\red192\\green0\\blue106;}
+\\f0\\fs22\\rtlgutter
+\\deflang1037
+${titleLine}${dateLine}
+${headerRow()}${rows}
+}`;
+
+  const blob=new Blob([rtf],{type:'application/msword'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`סיכום_יום_${date}.doc`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  showToast('✓ קובץ הורד!');
+}
+
+function exportCSV(){
+  if(!entries.length){showToast('אין רשומות');return}
+  const date=document.getElementById('shoot-date').value||'';
+  const filtered=date?entries.filter(e=>(e.date||'')===date):entries;
+  if(!filtered.length){showToast('⚠️ אין רשומות לתאריך '+date);return}
+  const h=['שם האייטם','שעה','לוקיישן','סוג','תוכן'];
+  const rows=filtered.map(e=>[e.name||'',e.time,e.location||'',typeLabel(e.type),e.content.replace(/\n/g,' ')]);
+  const csv=[h,...rows].map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`סיכום_יום_${date}.csv`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  showToast('✓ CSV הורד!');
+}
+
+// ── API KEY MANAGEMENT ──
+
+// Save API key to localStorage and update UI
+function saveApiKey(){
+  const key=document.getElementById('api-key-input').value.trim();
+  if(!key.startsWith('sk-ant-')){
+    document.getElementById('api-key-status').textContent='⚠️ המפתח לא נראה תקין — צריך להתחיל ב-sk-ant-';
+    return;
+  }
+  localStorage.setItem('filmlog_api_key',key);
+  document.getElementById('api-key-input').value='';
+  updateApiKeyStatus();
+  showToast('✓ מפתח נשמר — AI פעיל!');
+}
+// Remove API key from localStorage
+function removeApiKey(){
+  localStorage.removeItem('filmlog_api_key');
+  updateApiKeyStatus();
+  showToast('מפתח הוסר');
+}
+
+// Show current API key status in UI
+function updateApiKeyStatus(){
+  const key=localStorage.getItem('filmlog_api_key')||'';
+  const statusEl=document.getElementById('api-key-status');
+  const analyzeBtn=document.getElementById('analyze-btn');
+  const pendingMsg=document.getElementById('analysis-pending-msg');
+  if(key){
+    if(statusEl) statusEl.textContent='✓ מפתח אישי שמור — AI פעיל';
+    if(analyzeBtn){analyzeBtn.disabled=false;analyzeBtn.style.opacity='1';}
+    if(pendingMsg) pendingMsg.style.display='none';
+  } else {
+    if(statusEl) statusEl.textContent='אין מפתח — הוסף מפתח אישי כדי להפעיל AI';
+    if(analyzeBtn){analyzeBtn.disabled=true;analyzeBtn.style.opacity='.5';}
+    if(pendingMsg) pendingMsg.style.display='block';
+  }
+}
+
+// Core function: call Claude API with a given prompt
+async function callClaude(prompt){
+  const key=localStorage.getItem('filmlog_api_key');
+  if(!key) throw new Error('אין מפתח API');
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':key,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({
+      model:'claude-sonnet-4-6',
+      max_tokens:1000,
+      system:`אתה עוזר לבמאית דוקומנטרית של סדרת הריאליטי "חתונה ממבט ראשון" בערוץ 12.
+
+הפורמט: שני אנשים זרים נפגשים לראשונה מתחת לחופה ועוברים תהליך של חיים משותפים תחת ליווי פסיכולוגים. בסוף מחליטים יחד להמשיך או להיפרד.
+
+מה מעניין בסדרה:
+- הדינמיקה הראשונית בין זרים שחולקים חיים פתאום
+- פערים בין מה שהם אומרים בטסטה לבין מה שהם עושים בסצנה
+- רגעי אמת — שיחות, ויכוחים, התקרבות, התרחקות, הומור
+- תגובות לאירועים ראשונים — לילה ראשון, בית משותף, הכרת משפחות, חופשה
+- ציפיות מול מציאות — מה כל אחד חלם ומה הוא מקבל
+- שפת גוף, שתיקות, רגעים לא מדוברים
+
+שאלות טסטה טובות:
+- פונות לרגש, לא לעובדה
+- "איך הרגשת כש..." ולא "מה קרה..."
+- "מה חשבת לעצמך באותו רגע"
+- "מה זה אומר לך על הקשר שלכם"
+- "מה הפתיע אותך היום"
+- "מה לא אמרת לו/לה ורצית"
+
+השב תמיד בעברית, בצורה תמציתית וממוקדת.`,
+      messages:[{role:'user',content:prompt}]
+    })
+  });
+  if(!res.ok){
+    const err=await res.json();
+    throw new Error(err.error?.message||'שגיאת API');
+  }
+  const data=await res.json();
+  return data.content[0].text;
+}
+
+// ── INSIGHTS ──
+
+// Load toggle state from localStorage
+function loadInsightSettings(){
+  const on=localStorage.getItem('filmlog_realtime_insights')==='true';
+  document.getElementById('realtime-toggle').checked=on;
+}
+
+// Save toggle state to localStorage
+function saveInsightSettings(){
+  const on=document.getElementById('realtime-toggle').checked;
+  localStorage.setItem('filmlog_realtime_insights',String(on));
+}
+
+// Load saved insights from localStorage
+function loadInsights(){
+  try{return JSON.parse(localStorage.getItem('filmlog_insights')||'[]')}catch(e){return[]}
+}
+
+// Save insights array to localStorage
+function saveInsights(arr){
+  try{localStorage.setItem('filmlog_insights',JSON.stringify(arr))}catch(e){}
+}
+
+// Generate a realtime insight for a single entry via Claude API
+async function generateRealtimeInsight(entry){
+  const key=localStorage.getItem('filmlog_api_key');
+  if(!key){showToast('⚠️ אין מפתח API — התובנה לא נוצרה');return;}
+  showToast('💡 מייצר תובנה...');
+  const context=entries.slice(-5).map(e=>`[${e.time}] ${typeLabel(e.type)}: ${e.content}`).join('\n');
+  const prompt=`הנה הרשומה האחרונה מיום הצילום:
+סוג: ${typeLabel(entry.type)}
+שם אייטם: ${entry.name||'—'}
+לוקיישן: ${entry.location||'—'}
+שעה: ${entry.time}
+תוכן: ${entry.content}
+
+הקשר — 5 הרשומות האחרונות של היום:
+${context}
+
+בבקשה:
+1. תצפית קצרה (משפט אחד) — מה מעניין או משמעותי ברשומה הזו
+2. שתי שאלות טסטה ממוקדות שנובעות ישירות מהרשומה הזו
+
+פורמט תשובה בדיוק כך:
+תצפית: [משפט אחד]
+שאלה 1: [שאלה]
+שאלה 2: [שאלה]`;
+  try{
+    const response=await callClaude(prompt);
+    const lines=response.split('\n').filter(l=>l.trim());
+    const obs=lines.find(l=>l.startsWith('תצפית:'))?.replace('תצפית:','').trim()||response;
+    const q1=lines.find(l=>l.startsWith('שאלה 1:'))?.replace('שאלה 1:','').trim()||'';
+    const q2=lines.find(l=>l.startsWith('שאלה 2:'))?.replace('שאלה 2:','').trim()||'';
+    const insight={
+      id:Date.now(),
+      time:entry.time,
+      entryRef:entry.name||typeLabel(entry.type),
+      observation:obs,
+      questions:[q1,q2].filter(Boolean)
+    };
+    const arr=loadInsights();
+    arr.push(insight);
+    saveInsights(arr);
+    showToast('💡 תובנה נשמרה!');
+  }catch(err){
+    showToast('⚠️ שגיאה: '+err.message);
+  }
+}
+
+// Run full day analysis via Claude API
+async function runDayAnalysis(){
+  if(!entries.length){showToast('⚠️ אין רשומות לניתוח');return}
+  const dateFilter=(document.getElementById('analysis-date-filter').value||'').trim();
+  const filtered=dateFilter?entries.filter(e=>(e.date||'').includes(dateFilter)):entries;
+  if(!filtered.length){showToast('⚠️ אין רשומות לתאריך '+dateFilter);return}
+  const box=document.getElementById('day-analysis-result');
+  const btn=document.getElementById('analyze-btn');
+  btn.disabled=true;btn.textContent='⏳ מנתח...';
+  box.innerHTML='<div class="pending-badge">AI עובד על הניתוח, רגע...</div>';
+  const summary=filtered.map(e=>`[${e.time}] ${typeLabel(e.type)}${e.name?' — '+e.name:''}: ${e.content}`).join('\n');
+  const prompt=`להלן סיכום יום הצילום המלא:
+
+${summary}
+
+בבקשה ספקי:
+
+1. שלוש תובנות מרכזיות מהיום — רגעים משמעותיים, דינמיקות מעניינות, דברים שנאמרו שכדאי לשים לב אליהם
+2. חמש הצעות לשאלות לטסטה — שאלות שפונות לרגש ולא לעובדה, שנובעות ישירות מאירועי היום
+
+פורמט תשובה בדיוק כך:
+תובנה 1: [טקסט]
+תובנה 2: [טקסט]
+תובנה 3: [טקסט]
+שאלה 1: [שאלה]
+שאלה 2: [שאלה]
+שאלה 3: [שאלה]
+שאלה 4: [שאלה]
+שאלה 5: [שאלה]`;
+  try{
+    const response=await callClaude(prompt);
+    const lines=response.split('\n').filter(l=>l.trim());
+    const insights=lines.filter(l=>l.startsWith('תובנה ')).map(l=>l.replace(/^תובנה \d+:\s*/,'').trim());
+    const questions=lines.filter(l=>l.startsWith('שאלה ')).map(l=>l.replace(/^שאלה \d+:\s*/,'').trim());
+    box.innerHTML=`
+      <div class="analysis-box">
+        <div class="analysis-section">
+          <div class="analysis-title">💡 תובנות מהיום</div>
+          ${insights.length?insights.map(p=>`<div class="analysis-item">${p}</div>`).join(''):'<div class="analysis-item">לא זוהו תובנות</div>'}
+        </div>
+        <div class="analysis-section">
+          <div class="analysis-title">🎤 הצעות לשאלות טסטה</div>
+          ${questions.length?questions.map(q=>`<div class="analysis-item">${q}</div>`).join(''):'<div class="analysis-item">לא זוהו שאלות</div>'}
+        </div>
+      </div>`;
+  }catch(err){
+    box.innerHTML=`<div class="pending-badge">⚠️ שגיאה: ${err.message}</div>`;
+  }finally{
+    btn.disabled=false;btn.textContent='🧠 נתח את היום המלא';
+  }
+}
+
+// Generate testah questions for a specific entry
+async function suggestTestah(id){
+  const e=entries.find(x=>x.id===id);
+  if(!e)return;
+  const box=document.getElementById('testah-suggestions-'+id);
+  if(!box)return;
+  if(box.style.display==='block'){box.style.display='none';return;}
+  box.style.display='block';
+  box.textContent='⏳ מייצר שאלות...';
+  const prompt=`להלן רשומה מיום צילום של סדרת הריאליטי "חתונה ממבט ראשון":
+סוג: ${typeLabel(e.type)}
+שם אייטם: ${e.name||'—'}
+תוכן: ${e.content}
+
+הצע 3 שאלות טסטה ממוקדות שנובעות ישירות מהרשומה הזו.
+השאלות צריכות לפנות לרגש, לא לעובדה.
+החזר רק את השאלות, ממוספרות 1-3, בלי הקדמה.`;
+  try{
+    const response=await callClaude(prompt);
+    box.innerHTML=response.split('\n').filter(l=>l.trim()).map(l=>`<div style="margin-bottom:6px">${l}</div>`).join('');
+  }catch(err){
+    box.textContent='⚠️ שגיאה: '+err.message;
+  }
+}
+
+// Render all saved realtime insights in the tab
+function renderInsights(){
+  const arr=loadInsights();
+  const list=document.getElementById('realtime-insights-list');
+  const empty=document.getElementById('realtime-empty');
+  if(!arr.length){list.innerHTML='';empty.style.display='block';list.appendChild(empty);return}
+  empty.style.display='none';
+  list.innerHTML=arr.slice().reverse().map(ins=>`
+    <div class="insight-chip">
+      <div class="insight-time">${ins.time}</div>
+      <div class="insight-entry-ref">${ins.entryRef}</div>
+      <div class="insight-text">${ins.observation}</div>
+      ${ins.questions&&ins.questions.length?`
+      <div class="insight-questions">
+        ${ins.questions.map(q=>`<div class="insight-q">${q}</div>`).join('')}
+      </div>`:''}
+    </div>`).join('');
+}
+
+loadInsightSettings();
+updateApiKeyStatus();
+
+updateCount();updateStats();
+</script>
+</body>
+</html>
