@@ -721,16 +721,15 @@ function rtfCell(text,bold){
 }
 
 function exportRTF(){
-  // Read from localStorage for most reliable data
-  let localEntries=[];
-  try{localEntries=JSON.parse(localStorage.getItem(userKey('v3'))||'[]')}catch(e){localEntries=entries;}
-  if(!localEntries.length){showToast('⚠️ אין רשומות');return}
+  // Use entries array which is synced from Supabase
+  const allEntries=entries.length?entries:JSON.parse(localStorage.getItem(userKey('v3'))||'[]');
+  if(!allEntries.length){showToast('⚠️ אין רשומות');return}
   const series=document.getElementById('series-name').value||'חתונה ממבט ראשון';
   const season=document.getElementById('season-name').value||'';
   const date=document.getElementById('shoot-date').value||'';
 
-  // Flexible date filter — includes instead of exact match
-  const filtered=date?localEntries.filter(e=>(e.date||'').includes(date)):localEntries;
+  // Flexible date filter
+  const filtered=date?allEntries.filter(e=>(e.date||'').includes(date)):allEntries;
   if(!filtered.length){showToast('⚠️ אין רשומות לתאריך '+date);return}
 
   // Group by item name
@@ -796,11 +795,10 @@ ${headerRow()}${rows}
 }
 
 function exportCSV(){
-  let localEntries=[];
-  try{localEntries=JSON.parse(localStorage.getItem(userKey('v3'))||'[]')}catch(e){localEntries=entries;}
-  if(!localEntries.length){showToast('אין רשומות');return}
+  const allEntries=entries.length?entries:JSON.parse(localStorage.getItem(userKey('v3'))||'[]');
+  if(!allEntries.length){showToast('אין רשומות');return}
   const date=document.getElementById('shoot-date').value||'';
-  const filtered=date?localEntries.filter(e=>(e.date||'').includes(date)):localEntries;
+  const filtered=date?allEntries.filter(e=>(e.date||'').includes(date)):allEntries;
   if(!filtered.length){showToast('⚠️ אין רשומות לתאריך '+date);return}
   const h=['שם האייטם','שעה','לוקיישן','סוג','תוכן'];
   const rows=filtered.map(e=>[e.name||'',e.time,e.location||'',typeLabel(e.type),e.content.replace(/\n/g,' ')]);
