@@ -730,13 +730,13 @@ function exportRTF(){
   const filtered=date?allEntries.filter(e=>(e.date||'').includes(date)):allEntries;
   if(!filtered.length){showToast('⚠️ אין רשומות לתאריך '+date);return}
 
-  const W=[1700,1200,4560,2300];
+  const W=[1700,1200,4560,2300]; // name | time+loc | content | testah
   function colDef(w){return`\\clbrdrt\\brdrw10\\brdrs\\clbrdrl\\brdrw10\\brdrs\\clbrdrb\\brdrw10\\brdrs\\clbrdrr\\brdrw10\\brdrs\\cellx${w}`}
   let cumW=0;
   const colDefs=W.map(w=>{cumW+=w;return colDef(cumW)}).join('\n');
 
   function headerRow(){
-    const headers=['שם האייטם','שעה+לוקיישן','תוכן','סוג'];
+    const headers=['שם האייטם','שעה+לוקיישן+מצלמה','תוכן הסצנה','טסטה (שעה+פירוט)'];
     return `\\trowd\\trgaph70\n${colDefs}\n`+
       headers.map(h=>`\\pard\\intbl\\qc\\rtlpar {\\b ${rtfEscape(h)}}\\cell\n`).join('')+
       `\\row\n`;
@@ -744,11 +744,15 @@ function exportRTF(){
 
   function dataRow(e){
     const timeLoc=[e.time,e.location].filter(Boolean).join('\n');
+    const isTestah=e.type==='testah'||e.type==='testah-fly';
+    const label=e.type==='testah-fly'?'[און דה פליי] ':'';
+    const content=isTestah?'':e.content;
+    const testah=isTestah?label+e.content:'';
     return `\\trowd\\trgaph70\n${colDefs}\n`+
       rtfCell(e.name||'')+
       rtfCell(timeLoc)+
-      rtfCell(e.content)+
-      rtfCell(typeLabel(e.type))+
+      rtfCell(content)+
+      rtfCell(testah)+
       `\\row\n`;
   }
 
