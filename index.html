@@ -317,6 +317,7 @@ strong.kw{font-weight:700;color:var(--pink)}
         <div class="stat-box"><div class="stat-num" id="stat-vis">0</div><div class="stat-lbl">VIS</div></div>
       </div>
       <button class="btn-pink" onclick="exportRTF()">⬇️ ייצוא קובץ Word (.doc)</button>
+      <div style="margin-top:8px;font-size:15px;color:var(--txt3);text-align:center" id="export-debug"></div>
       <div style="margin-top:8px">
         <button class="btn-outline" onclick="exportCSV()">📊 ייצוא CSV</button>
       </div>
@@ -579,7 +580,7 @@ function switchTab(tab){
   ['write','log','insights','export'].forEach(t=>{document.getElementById('tab-'+t).style.display=t===tab?'flex':'none'});
   document.querySelectorAll('.tab').forEach((el,i)=>{el.classList.toggle('active',['write','log','insights','export'][i]===tab)});
   if(tab==='log')renderList();
-  if(tab==='export')updateStats();
+  if(tab==='export'){updateStats();const el=document.getElementById('export-debug');if(el)el.textContent='רשומות בזיכרון: '+entries.length+' | בתאריך: '+(document.getElementById('shoot-date').value||'לא הוגדר');}
   if(tab==='insights')renderInsights();
 }
 function typeLabel(t){return{scene:'סצנה',testah:'טסטה',['testah-fly']:'טסטה און דה פליי',vis:'VIS / ויזואל',shatp:'שת"פ'}[t]||t}
