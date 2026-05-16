@@ -722,61 +722,39 @@ function rtfCell(text,bold){
 }
 
 function exportRTF(){
-  // Use entries array which is synced from Supabase
   const allEntries=entries.length?entries:JSON.parse(localStorage.getItem(userKey('v3'))||'[]');
   if(!allEntries.length){showToast('⚠️ אין רשומות');return}
   const series=document.getElementById('series-name').value||'חתונה ממבט ראשון';
   const season=document.getElementById('season-name').value||'';
   const date=document.getElementById('shoot-date').value||'';
-
-  // Flexible date filter
   const filtered=date?allEntries.filter(e=>(e.date||'').includes(date)):allEntries;
   if(!filtered.length){showToast('⚠️ אין רשומות לתאריך '+date);return}
 
-  // Group by item name
-  const order=[];
-  const map={};
-  filtered.forEach(e=>{
-    const key=e.name||('_'+e.id);
-    if(!map[key]){map[key]={name:e.name||'',time:e.time,location:e.location||'',scenes:[],testahs:[]};order.push(key)}
-    if(e.type==='testah'||e.type==='testah-fly'){
-      const label=e.type==='testah-fly'?'און דה פליי':'';
-      map[key].testahs.push((label?'['+label+'] ':'')+e.time+' '+e.content);
-    } else map[key].scenes.push(e.content);
-  });
-
-  // Column widths in twips (1440 twips = 1 inch)
-  // Total ~9360 twips for content area
-  const W=[1700,1200,4560,2300]; // name | time+loc | content | testah
-
+  const W=[1700,1200,4560,2300];
   function colDef(w){return`\\clbrdrt\\brdrw10\\brdrs\\clbrdrl\\brdrw10\\brdrs\\clbrdrb\\brdrw10\\brdrs\\clbrdrr\\brdrw10\\brdrs\\cellx${w}`}
-
   let cumW=0;
   const colDefs=W.map(w=>{cumW+=w;return colDef(cumW)}).join('\n');
 
   function headerRow(){
-    const headers=['שם האייטם','שעה+לוקיישן+מצלמה','תוכן הסצנה','טסטה (שעה+פירוט)'];
+    const headers=['שם האייטם','שעה+לוקיישן','תוכן','סוג'];
     return `\\trowd\\trgaph70\n${colDefs}\n`+
       headers.map(h=>`\\pard\\intbl\\qc\\rtlpar {\\b ${rtfEscape(h)}}\\cell\n`).join('')+
       `\\row\n`;
   }
 
-  function dataRow(g){
-    const timeLoc=[g.time,g.location].filter(Boolean).join('\n');
-    const sceneText=g.scenes.join('\n');
-    const testahText=g.testahs.join('\n');
+  function dataRow(e){
+    const timeLoc=[e.time,e.location].filter(Boolean).join('\n');
     return `\\trowd\\trgaph70\n${colDefs}\n`+
-      rtfCell(g.name,false)+
-      rtfCell(timeLoc,false)+
-      rtfCell(sceneText,false)+
-      rtfCell(testahText,false)+
+      rtfCell(e.name||'')+
+      rtfCell(timeLoc)+
+      rtfCell(e.content)+
+      rtfCell(typeLabel(e.type))+
       `\\row\n`;
   }
 
   const titleLine=`\\pard\\qc\\rtlpar {\\b\\ul ${rtfEscape('סיכום יום – '+series+' '+season)}}\\par\n`;
   const dateLine=`\\pard\\qc\\rtlpar {\\b\\ul ${rtfEscape('תאריך: '+date)}}\\par\\par\n`;
-
-  const rows=order.map(k=>dataRow(map[k])).join('');
+  const rows=filtered.map(e=>dataRow(e)).join('');
 
   const rtf=`{\\rtf1\\ansi\\deff0
 {\\fonttbl{\\f0\\froman\\fcharset177 David;}}
