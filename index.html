@@ -324,6 +324,7 @@ strong.kw{font-weight:700;color:var(--pink)}
     <div class="notice">הקובץ נפתח ב-Word, Numbers ו-Pages. כולל: טבלה מסודרת, הדגשות, ציטוטים במרכאות, טסטות בעמודה נפרדת.</div>
     <div class="card">
       <div class="card-label">ניהול נתונים</div>
+      <button class="btn-outline" onclick="exportLocalBackup()" style="margin-bottom:8px">💾 גיבוי מקומי — כל הרשומות</button>
       <button class="btn-outline btn-danger" onclick="clearAll()">🗑 מחיקת כל הרשומות</button>
     </div>
     <div class="card">
@@ -601,7 +602,8 @@ async function addEntry(){
   const entryTime=writingStartTime||nowTime();
   writingStartTime=null;
   content=addQuotes(content);
-  const entry={id:Date.now(),time:entryTime,date:document.getElementById('shoot-date').value||'',name,location,type,content};
+  const entryDate=document.getElementById('shoot-date').value||pad(new Date().getDate())+'.'+pad(new Date().getMonth()+1);
+  const entry={id:Date.now(),time:entryTime,date:entryDate,name,location,type,content};
   entries.push(entry);
   await saveData();
   document.getElementById('item-name').value='';
@@ -719,13 +721,16 @@ function rtfCell(text,bold){
 }
 
 function exportRTF(){
-  if(!entries.length){showToast('⚠️ אין רשומות');return}
+  // Read from localStorage for most reliable data
+  let localEntries=[];
+  try{localEntries=JSON.parse(localStorage.getItem(userKey('v3'))||'[]')}catch(e){localEntries=entries;}
+  if(!localEntries.length){showToast('⚠️ אין רשומות');return}
   const series=document.getElementById('series-name').value||'חתונה ממבט ראשון';
   const season=document.getElementById('season-name').value||'';
   const date=document.getElementById('shoot-date').value||'';
 
-  // Filter entries by current date
-  const filtered=date?entries.filter(e=>(e.date||'')=== date):entries;
+  // Flexible date filter — includes instead of exact match
+  const filtered=date?localEntries.filter(e=>(e.date||'').includes(date)):localEntries;
   if(!filtered.length){showToast('⚠️ אין רשומות לתאריך '+date);return}
 
   // Group by item name
@@ -791,9 +796,11 @@ ${headerRow()}${rows}
 }
 
 function exportCSV(){
-  if(!entries.length){showToast('אין רשומות');return}
+  let localEntries=[];
+  try{localEntries=JSON.parse(localStorage.getItem(userKey('v3'))||'[]')}catch(e){localEntries=entries;}
+  if(!localEntries.length){showToast('אין רשומות');return}
   const date=document.getElementById('shoot-date').value||'';
-  const filtered=date?entries.filter(e=>(e.date||'')===date):entries;
+  const filtered=date?localEntries.filter(e=>(e.date||'').includes(date)):localEntries;
   if(!filtered.length){showToast('⚠️ אין רשומות לתאריך '+date);return}
   const h=['שם האייטם','שעה','לוקיישן','סוג','תוכן'];
   const rows=filtered.map(e=>[e.name||'',e.time,e.location||'',typeLabel(e.type),e.content.replace(/\n/g,' ')]);
@@ -806,7 +813,30 @@ function exportCSV(){
   showToast('✓ CSV הורד!');
 }
 
-// ── API KEY MANAGEMENT ──
+// Export ALL local entries as CSV backup regardless of date filter
+function exportLocalBackup(){
+  let localEntries=[];
+  try{localEntries=JSON.parse(localStorage.getItem(userKey('v3'))||'[]')}catch(e){localEntries=entries;}
+  if(!localEntries.length){showToast('אין רשומות לגיבוי');return}
+  const h=['תאריך','שם האייטם','שעה','לוקיישן','סוג','תוכן'];
+  const rows=localEntries.map(e=>[e.date||'',e.name||'',e.time,e.location||'',typeLabel(e.type),e.content.replace(/\n/g,' ')]);
+  const csv=[h,...rows].map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  const now=new Date();
+  a.download=`גיבוי_מקומי_${pad(now.getDate())}.${pad(now.getMonth()+1)}_${pad(now.getHours())}${pad(now.getMinutes())}.csv`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  showToast('✓ גיבוי מקומי הורד!');
+}
+
+// Auto-save to localStorage every 5 minutes
+setInterval(()=>{
+  if(entries.length){
+    try{localStorage.setItem(userKey('v3'),JSON.stringify(entries));}catch(e){}
+    showToast('💾 נשמר אוטומטית');
+  }
+},5*60*1000);
 
 // Save API key to localStorage and update UI
 function saveApiKey(){
