@@ -78,6 +78,12 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .toast{position:fixed;bottom:calc(30px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%) translateY(80px);background:#1A1A1A;color:#fff;font-family:'Heebo',sans-serif;padding:12px 22px;border-radius:20px;font-size:18px;transition:transform .3s ease;z-index:999;white-space:nowrap}
 .toast.show{transform:translateX(-50%) translateY(0)}
 strong.kw{font-weight:700;color:var(--pink)}
+/* ── EDIT MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:flex;align-items:flex-end;justify-content:center}
+.modal{background:var(--bg);border-radius:var(--rl) var(--rl) 0 0;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;padding:20px 18px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+.modal-title{font-size:20px;font-weight:600;color:var(--pink);margin-bottom:16px;text-align:right}
+.modal-time-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.modal-time-input{font-size:20px;font-family:'Heebo',sans-serif;padding:10px 14px;border:1px solid var(--brd2);border-radius:var(--r);background:var(--bg2);color:var(--txt);direction:ltr;width:110px;-webkit-appearance:none}
 /* ── INSIGHTS TAB ── */
 .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:14px 0 10px}
 .toggle-label{font-size:18px;color:var(--txt)}
@@ -196,6 +202,32 @@ strong.kw{font-weight:700;color:var(--pink)}
   </div>
 </div>
 
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal" style="display:none" onclick="if(event.target===this)closeEditModal()">
+  <div class="modal">
+    <div class="modal-title">✏️ עריכת רשומה</div>
+    <div class="modal-time-row">
+      <span class="field-label">שעה</span>
+      <input class="modal-time-input" type="text" id="edit-time" placeholder="13:45">
+    </div>
+    <div class="field-row"><span class="field-label">שם אייטם</span><input type="text" id="edit-name" placeholder="שם האייטם"></div>
+    <div class="field-row"><span class="field-label">לוקיישן</span><input type="text" id="edit-location" placeholder="לוקיישן"></div>
+    <div class="field-row">
+      <span class="field-label">סוג</span>
+      <select id="edit-type">
+        <option value="scene">סצנה</option>
+        <option value="testah">טסטה</option>
+        <option value="testah-fly">טסטה און דה פליי</option>
+        <option value="vis">VIS / ויזואל</option>
+        <option value="shatp">שת"פ</option>
+      </select>
+    </div>
+    <textarea id="edit-content" style="margin-bottom:12px"></textarea>
+    <button class="btn-pink" onclick="saveEdit()">שמור שינויים</button>
+    <button class="btn-outline" style="margin-top:8px" onclick="closeEditModal()">ביטול</button>
+  </div>
+</div>
+
 <div class="app">
   <div class="topbar">
     <div class="topbar-row">
@@ -287,6 +319,12 @@ strong.kw{font-weight:700;color:var(--pink)}
           תובנות יופיעו כאן לאחר הוספת רשומות
         </div>
       </div>
+    </div>
+
+    <div class="card">
+      <div class="card-label">סיכום יום קצר</div>
+      <button class="btn-pink" id="summary-btn" onclick="runDaySummary()">📝 צור סיכום יום קצר</button>
+      <div id="day-summary-result" style="margin-top:12px"></div>
     </div>
 
     <div class="card">
@@ -667,14 +705,85 @@ function renderList(){
     </div>`).join('');
 }
 function deleteEntry(id){if(!confirm('למחוק?'))return;deleteEntryRemote(id);entries=entries.filter(e=>e.id!==id);saveData();renderList()}
+
+// Open edit modal for a specific entry
 function editEntry(id){
-  const e=entries.find(x=>x.id===id);if(!e)return;
-  switchTab('write');
-  document.getElementById('item-name').value=e.name||'';
-  document.getElementById('location').value=e.location||'';
-  document.getElementById('entry-type').value=e.type;
-  document.getElementById('content').value=e.content;
-  entries=entries.filter(x=>x.id!==id);saveData();
+  const e=entries.find(x=>x.id===id);
+  if(!e)return;
+  document.getElementById('edit-modal').dataset.editId=id;
+  document.getElementById('edit-time').value=e.time||'';
+  document.getElementById('edit-name').value=e.name||'';
+  document.getElementById('edit-location').value=e.location||'';
+  document.getElementById('edit-type').value=e.type||'scene';
+  document.getElementById('edit-content').value=e.content||'';
+  document.getElementById('edit-modal').style.display='flex';
+}
+
+// Close edit modal without saving
+function closeEditModal(){
+  document.getElementById('edit-modal').style.display='none';
+}
+
+// Save edited entry — keeps original time unless changed
+async function saveEdit(){
+  const id=Number(document.getElementById('edit-modal').dataset.editId);
+  const idx=entries.findIndex(x=>x.id===id);
+  if(idx===-1)return;
+  entries[idx]={
+    ...entries[idx],
+    time:document.getElementById('edit-time').value.trim()||entries[idx].time,
+    name:document.getElementById('edit-name').value.trim(),
+    location:document.getElementById('edit-location').value.trim(),
+    type:document.getElementById('edit-type').value,
+    content:addQuotes(document.getElementById('edit-content').value.trim())
+  };
+  // update in Supabase
+  if(currentUser){
+    try{
+      await supa.from('entries').upsert({
+        id:entries[idx].id,user_id:currentUser.id,
+        time:entries[idx].time,date:entries[idx].date,
+        name:entries[idx].name,location:entries[idx].location,
+        type:entries[idx].type,content:entries[idx].content
+      });
+    }catch(e){}
+  }
+  try{localStorage.setItem(userKey('v3'),JSON.stringify(entries))}catch(e){}
+  closeEditModal();
+  renderList();
+  showToast('✓ נשמר');
+}
+
+// Generate a short day summary via Claude API
+async function runDaySummary(){
+  if(!entries.length){showToast('⚠️ אין רשומות');return}
+  const dateFilter=(document.getElementById('analysis-date-filter').value||'').trim();
+  const filtered=dateFilter?entries.filter(e=>(e.date||'').includes(dateFilter)):entries;
+  if(!filtered.length){showToast('⚠️ אין רשומות לתאריך זה');return}
+  const box=document.getElementById('day-summary-result');
+  const btn=document.getElementById('summary-btn');
+  btn.disabled=true;btn.textContent='⏳ מייצר סיכום...';
+  box.innerHTML='<div class="pending-badge">רגע...</div>';
+  const summary=filtered.map(e=>`[${e.time}] ${typeLabel(e.type)}${e.name?' — '+e.name:''}: ${e.content}`).join('\n');
+  const prompt=`להלן רשומות יום צילום של סדרת הריאליטי "חתונה ממבט ראשון":
+
+${summary}
+
+כתוב סיכום יום קצר — פסקה אחת של 3-5 משפטים. הסיכום צריך להיות בגוף שלישי, מקצועי, ולתמצת את האירועים המשמעותיים של היום. מתאים לשליחה בווטסאפ לצוות.`;
+  try{
+    const response=await callClaude(prompt);
+    box.innerHTML=`<div style="background:var(--bg2);border-radius:var(--r);padding:14px;font-size:18px;line-height:1.7;color:var(--txt);text-align:right">${response.replace(/\n/g,'<br>')}</div>
+    <button class="btn-outline" style="margin-top:8px" onclick="copyToClipboard('${response.replace(/'/g,"\\'")}')">📋 העתק</button>`;
+  }catch(err){
+    box.innerHTML=`<div class="pending-badge">⚠️ שגיאה: ${err.message}</div>`;
+  }finally{
+    btn.disabled=false;btn.textContent='📝 צור סיכום יום קצר';
+  }
+}
+
+// Copy text to clipboard
+function copyToClipboard(text){
+  navigator.clipboard.writeText(text).then(()=>showToast('✓ הועתק!')).catch(()=>showToast('⚠️ לא הצליח להעתיק'));
 }
 function clearAll(){if(!confirm('למחוק הכל?'))return;entries=[];saveData();renderList();showToast('🗑 נמחק')}
 
