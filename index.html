@@ -311,41 +311,35 @@ strong.kw{font-weight:700;color:var(--pink)}
 
   <!-- INSIGHTS -->
   <div class="main" id="tab-insights" style="display:none">
+
     <div class="card">
-      <div class="card-label">תובנות בזמן אמת</div>
-      <div id="realtime-insights-list">
-        <div class="empty-state" id="realtime-empty" style="padding:20px 0">
-          <div style="font-size:32px;margin-bottom:8px">💡</div>
-          תובנות יופיעו כאן לאחר הוספת רשומות
+      <div class="card-label">🎤 שאלות לטסטה</div>
+      <div style="margin-bottom:12px">
+        <div class="field-row">
+          <span class="field-label" style="min-width:80px">תאריך</span>
+          <input type="text" id="testah-date-filter" placeholder="למשל: 19.05 — ריק = כל הרשומות" style="font-size:17px">
         </div>
       </div>
+      <div class="pending-badge" id="testah-pending-msg">⏳ ממתין לחיבור AI</div>
+      <button class="btn-pink" id="testah-btn" onclick="runTestahQuestions()" disabled style="opacity:.5">
+        🎤 צור שאלות לטסטה
+      </button>
+      <div id="testah-result" style="margin-top:12px"></div>
     </div>
 
     <div class="card">
-      <div class="card-label">סיכום יום קצר</div>
+      <div class="card-label">📝 סיכום יום קצר</div>
       <div style="margin-bottom:12px">
         <div class="field-row">
           <span class="field-label" style="min-width:80px">תאריך</span>
           <input type="text" id="summary-date-filter" placeholder="למשל: 19.05 — ריק = כל הרשומות" style="font-size:17px">
         </div>
       </div>
-      <button class="btn-pink" id="summary-btn" onclick="runDaySummary()">📝 צור סיכום יום קצר</button>
-      <div id="day-summary-result" style="margin-top:12px"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-label">ניתוח סוף יום</div>
-      <div style="margin-bottom:12px">
-        <div class="field-row">
-          <span class="field-label" style="min-width:80px">תאריך</span>
-          <input type="text" id="analysis-date-filter" placeholder="למשל: 12.05 — ריק = כל הרשומות" style="font-size:17px">
-        </div>
-      </div>
-      <div class="pending-badge" id="analysis-pending-msg">⏳ ממתין לחיבור AI — הכפתור יופעל בקרוב</div>
-      <button class="btn-pink" id="analyze-btn" onclick="runDayAnalysis()" disabled style="opacity:.5">
-        🧠 נתח את היום המלא
+      <div class="pending-badge" id="summary-pending-msg">⏳ ממתין לחיבור AI</div>
+      <button class="btn-pink" id="summary-btn" onclick="runDaySummary()" disabled style="opacity:.5">
+        📝 צור סיכום יום קצר
       </button>
-      <div id="day-analysis-result" style="margin-top:12px"></div>
+      <div id="day-summary-result" style="margin-top:12px"></div>
     </div>
 
     <div class="notice">💡 כל התובנות פנימיות בלבד — לא מופיעות בסיכום היום</div>
