@@ -323,6 +323,12 @@ strong.kw{font-weight:700;color:var(--pink)}
 
     <div class="card">
       <div class="card-label">סיכום יום קצר</div>
+      <div style="margin-bottom:12px">
+        <div class="field-row">
+          <span class="field-label" style="min-width:80px">תאריך</span>
+          <input type="text" id="summary-date-filter" placeholder="למשל: 19.05 — ריק = כל הרשומות" style="font-size:17px">
+        </div>
+      </div>
       <button class="btn-pink" id="summary-btn" onclick="runDaySummary()">📝 צור סיכום יום קצר</button>
       <div id="day-summary-result" style="margin-top:12px"></div>
     </div>
@@ -496,8 +502,24 @@ function applyProfile(p){
   if(title) title.textContent=' · '+p.name;
 }
 
+// Check if access has expired (19.06.2026)
+function checkExpiry(){
+  const expiry=new Date('2026-06-19T23:59:59');
+  if(new Date()>expiry){
+    document.body.innerHTML=`
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:'Heebo',sans-serif;text-align:center;padding:32px;background:#fff">
+        <div style="font-size:52px;margin-bottom:16px">🎬</div>
+        <div style="font-size:24px;font-weight:600;color:#C0006A;margin-bottom:12px">לסיכום</div>
+        <div style="font-size:18px;color:#666;line-height:1.7">תקופת הגישה לכלי הסתיימה.<br>לחידוש — צרי קשר עם דנה וולפה.</div>
+      </div>`;
+    return true;
+  }
+  return false;
+}
+
 // Listen for auth state changes
 supa.auth.onAuthStateChange((event,session)=>{
+  if(checkExpiry())return;
   if(session&&session.user){
     enterApp(session.user);
   } else {
@@ -757,7 +779,7 @@ async function saveEdit(){
 // Generate a short day summary via Claude API
 async function runDaySummary(){
   if(!entries.length){showToast('⚠️ אין רשומות');return}
-  const dateFilter=(document.getElementById('analysis-date-filter').value||'').trim();
+  const dateFilter=(document.getElementById('summary-date-filter').value||'').trim();
   const filtered=dateFilter?entries.filter(e=>(e.date||'').includes(dateFilter)):entries;
   if(!filtered.length){showToast('⚠️ אין רשומות לתאריך זה');return}
   const box=document.getElementById('day-summary-result');
