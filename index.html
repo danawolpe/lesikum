@@ -973,16 +973,62 @@ function removeApiKey(){
 function updateApiKeyStatus(){
   const key=localStorage.getItem('filmlog_api_key')||'';
   const statusEl=document.getElementById('api-key-status');
-  const analyzeBtn=document.getElementById('analyze-btn');
-  const pendingMsg=document.getElementById('analysis-pending-msg');
+  const testahBtn=document.getElementById('testah-btn');
+  const testahMsg=document.getElementById('testah-pending-msg');
+  const summaryBtn=document.getElementById('summary-btn');
+  const summaryMsg=document.getElementById('summary-pending-msg');
   if(key){
     if(statusEl) statusEl.textContent='✓ מפתח אישי שמור — AI פעיל';
-    if(analyzeBtn){analyzeBtn.disabled=false;analyzeBtn.style.opacity='1';}
-    if(pendingMsg) pendingMsg.style.display='none';
+    if(testahBtn){testahBtn.disabled=false;testahBtn.style.opacity='1';}
+    if(testahMsg) testahMsg.style.display='none';
+    if(summaryBtn){summaryBtn.disabled=false;summaryBtn.style.opacity='1';}
+    if(summaryMsg) summaryMsg.style.display='none';
   } else {
     if(statusEl) statusEl.textContent='אין מפתח — הוסף מפתח אישי כדי להפעיל AI';
-    if(analyzeBtn){analyzeBtn.disabled=true;analyzeBtn.style.opacity='.5';}
-    if(pendingMsg) pendingMsg.style.display='block';
+    if(testahBtn){testahBtn.disabled=true;testahBtn.style.opacity='.5';}
+    if(testahMsg) testahMsg.style.display='block';
+    if(summaryBtn){summaryBtn.disabled=true;summaryBtn.style.opacity='.5';}
+    if(summaryMsg) summaryMsg.style.display='block';
+  }
+}
+
+// Generate testah questions based on the day's events
+async function runTestahQuestions(){
+  if(!entries.length){showToast('⚠️ אין רשומות');return}
+  const dateFilter=(document.getElementById('testah-date-filter').value||'').trim();
+  const filtered=dateFilter?entries.filter(e=>(e.date||'').includes(dateFilter)):entries;
+  if(!filtered.length){showToast('⚠️ אין רשומות לתאריך זה');return}
+  const box=document.getElementById('testah-result');
+  const btn=document.getElementById('testah-btn');
+  btn.disabled=true;btn.textContent='⏳ מייצר שאלות...';
+  box.innerHTML='<div class="pending-badge">רגע...</div>';
+  const summary=filtered.map(e=>`[${e.time}] ${typeLabel(e.type)}${e.name?' — '+e.name:''}: ${e.content}`).join('\n');
+  const prompt=`להלן רשומות יום צילום של סדרת הריאליטי "חתונה ממבט ראשון":
+
+${summary}
+
+בהתבסס על האירועים שקרו היום, צור 6 שאלות לטסטה (ראיון) שפונות לרגש ולא לעובדה.
+כל שאלה צריכה להתייחס ישירות לאירוע או רגע ספציפי שהיה היום.
+השאלות צריכות לפתוח שיחה עמוקה ומשמעותית.
+
+פורמט:
+1. [שאלה]
+2. [שאלה]
+3. [שאלה]
+4. [שאלה]
+5. [שאלה]
+6. [שאלה]`;
+  try{
+    const response=await callClaude(prompt);
+    const questions=response.split('\n').filter(l=>l.trim());
+    box.innerHTML=`<div style="background:var(--bg2);border-radius:var(--r);padding:14px">
+      ${questions.map(q=>`<div style="font-size:18px;line-height:1.7;color:var(--txt);padding:6px 0;border-bottom:1px solid var(--brd)">${q}</div>`).join('')}
+    </div>
+    <button class="btn-outline" style="margin-top:8px" onclick="navigator.clipboard.writeText(\`${response.replace(/`/g,'\\`')}\`).then(()=>showToast('✓ הועתק!'))">📋 העתק הכל</button>`;
+  }catch(err){
+    box.innerHTML=`<div class="pending-badge">⚠️ שגיאה: ${err.message}</div>`;
+  }finally{
+    btn.disabled=false;btn.textContent='🎤 צור שאלות לטסטה';
   }
 }
 
